@@ -3,6 +3,7 @@ package main
 import (
 	cryptorand "crypto/rand"
 	mathrand "math/rand"
+	"sync"
 	"testing"
 	"time"
 
@@ -14,7 +15,9 @@ import (
 )
 
 var (
-	mathEntropy = mathrand.New(mathrand.NewSource(time.Now().UTC().UnixNano()))
+	cryptoEntropy = oklogULID.Monotonic(cryptorand.Reader, 0)
+	mathEntropy   = oklogULID.Monotonic(mathrand.New(mathrand.NewSource(time.Now().UnixNano())), 0)
+	entropyMutex  sync.Mutex
 
 	UUIDSatori    = satoriUUID.NewV4()
 	UUIDSatoriStr = UUIDSatori.String()
@@ -125,9 +128,11 @@ func BenchmarkSegmentIOKSUIDNew(b *testing.B) {
 }
 
 func newULIDCryptoRand() oklogULID.ULID {
-	return oklogULID.MustNew(oklogULID.Now(), cryptorand.Reader)
+	return oklogULID.MustNew(oklogULID.Now(), cryptoEntropy)
 }
 
 func newULIDMathRand() oklogULID.ULID {
+	entropyMutex.Lock()
+	defer entropyMutex.Unlock()
 	return oklogULID.MustNew(oklogULID.Now(), mathEntropy)
 }
